@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ito - Candy Pop</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ito App">
+<link rel="apple-touch-icon" href="https://img.icons8.com/color/512/board-game.png">
+<link rel="icon" href="https://img.icons8.com/color/512/board-game.png">
+
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg-gradient: linear-gradient(135deg, #ff9ecb, #8fdcff);
+    --btn-gradient: linear-gradient(135deg, #ff7fbd, #7fd8ff);
+    --panel-bg: rgba(255, 255, 255, 0.2);
+    --text-color: #fff;
+    --card-back: repeating-linear-gradient(45deg, #ff9ecb, #ff9ecb 10px, #ffb3d9 10px, #ffb3d9 20px);
+  }
+
+  body.dark-mode {
+    --bg-gradient: linear-gradient(135deg, #1a1a2e, #16213e);
+    --btn-gradient: linear-gradient(135deg, #4e4376, #2b5876);
+    --panel-bg: rgba(0, 0, 0, 0.4);
+    --card-back: repeating-linear-gradient(45deg, #2b5876, #2b5876 10px, #4e4376 10px, #4e4376 20px);
+  }
+
+  body {
+    font-family: 'M PLUS Rounded 1c', 'Nunito', sans-serif;
+    background: var(--bg-gradient); color: var(--text-color);
+    text-align: center; padding: 20px; font-size: 18px; min-height: 100vh;
+    box-sizing: border-box; user-select: none; transition: all 0.5s ease;
+    margin: 0;
+  }
+
+  #stickyTopic {
+    position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7);
+    padding: 8px; font-weight: bold; font-size: 16px; z-index: 50; display: none;
+    backdrop-filter: blur(5px); color: #fff; border-bottom: 2px solid rgba(255,255,255,0.2);
+  }
+
+  h1 { font-size: 32px; font-weight: 800; margin: 20px 0; text-shadow: 0 3px 6px rgba(0,0,0,0.2); }
+
+  button {
+    font-family: inherit; font-size: 18px; padding: 12px 24px; margin: 8px;
+    border: none; border-radius: 50px; background: var(--btn-gradient); color: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.2); transition: transform 0.1s; cursor: pointer; font-weight: bold;
+  }
+  button:active { transform: translateY(4px); box-shadow: none; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary { background: #fff; color: #ff7fbd; }
+  body.dark-mode button.secondary { background: #2b5876; color: #fff; }
+  
+  .del-topic-btn { background: #ff4b82; font-size: 12px; padding: 5px 10px; border-radius: 8px; display: none; margin-left: 5px; }
+
+  .game-section { background: var(--panel-bg); border-radius: 20px; padding: 20px; margin: 20px auto; max-width: 500px; backdrop-filter: blur(5px); }
+
+  .card-container { perspective: 1000px; margin: 30px auto; width: 220px; height: 280px; }
+  #resultCard {
+    width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); border-radius: 20px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2); cursor: pointer;
+  }
+  .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  .card-front { background: #fff; color: #ff5fa8; transform: rotateY(0deg); }
+  .card-front .number { font-size: 90px; font-weight: 800; }
+  .card-back { background: var(--card-back); transform: rotateY(180deg); border: 4px solid #fff; }
+  #resultCard.is-hidden { transform: rotateY(180deg); }
+
+  @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px,2px); } 50% { transform: translate(-2px,0); } 75% { transform: translate(2px,-2px); } 100% { transform: translate(0,0); } }
+  .shaking { animation: shake 0.1s infinite; }
+
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; backdrop-filter: blur(3px); }
+  .modal-content { background: var(--bg-gradient); margin: 30px auto; padding: 25px; width: 85%; max-width: 400px; border-radius: 25px; border: 4px solid #fff; max-height: 80vh; overflow-y: auto; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+
+  .tag-btn { background: #fff; color: #ff7fbd; border-radius: 15px; padding: 5px 12px; font-size: 14px; margin: 4px; display: inline-block; cursor: pointer; font-weight: bold; position: relative; }
+  .delete-btn { background: #ff4b82; color: #fff; border-radius: 5px; padding: 2px 6px; margin-left: 5px; font-size: 12px; }
+
+  select, input { font-size: 18px; padding: 12px; margin: 8px; border-radius: 12px; border: 2px solid #fff; background: rgba(255,255,255,0.9); width: 85%; color: #333; }
+</style>
+</head>
+<body>
+
+<div id="stickyTopic">お題: <span id="currentTopicLabel">---</span></div>
+
+<h1>ito <span id="themeEmoji">🍬</span></h1>
+
+<div style="margin-bottom:10px;">
+  <button id="themeToggleBtn" class="secondary" style="font-size:14px; padding:8px 15px;">🌙 ダークモード切替</button>
+  <button id="openHistoryBtn" class="secondary" style="font-size:14px; padding:8px 15px;">📜 履歴</button>
+</div>
+
+<div id="setupArea" class="game-section">
+  <select id="categorySelect">
+    <option value="">カテゴリ選択</option>
+    <option value="popularity">⭐️ 人気・ランキング</option>
+    <option value="entertainment">🎮 エンタメ・キャラ</option>
+    <option value="food">🍱 食べ物・飲み物</option>
+    <option value="life">🏠 生活・場所</option>
+    <option value="love">💘 恋愛・人間関係</option>
+    <option value="fantasy">🧪 もしも・空想</option>
+    <option value="power">💪 強さ・大きさ</option>
+    <option value="emotion">✨ 感性・言葉</option>
+    <option value="custom">✏️ カスタム</option>
+  </select>
+
+  <div id="customTopicInputArea" style="display:none; margin: 10px 0;">
+    <input id="newTopicInput" type="text" placeholder="自作お題を入力">
+    <button id="addTopicBtn" style="padding: 10px 20px;">追加</button>
+  </div>
+
+  <div style="display:flex; align-items:center; justify-content:center;">
+    <select id="topicSelect" style="width:70%;"></select>
+    <button id="deleteTopicBtn" class="del-topic-btn">削除</button>
+  </div>
+
+  <div style="margin: 5px 0;">
+    <button id="randomTopicBtn" class="secondary" style="font-size:14px; padding:8px 16px;">🎲 お題スロット</button>
+  </div>
+
+  <div id="topicDisplay" style="font-size:22px; margin:15px 0; font-weight:bold; padding:15px; background:rgba(255,255,255,0.1); border-radius:10px; min-height: 1.5em; display: flex; align-items: center; justify-content: center;">お題を選んでください</div>
+
+  <div id="countInputArea">
+    <input id="playerCountInput" type="number" min="2" max="20" value="3" style="width:60px;"> 人
+    <button id="gotoNamesBtn">次へ</button>
+  </div>
+
+  <div id="nameArea" style="display:none;"></div>
+</div>
+
+<div id="playerArea" class="game-section" style="display:none; transition: opacity 0.3s;">
+  <h2 id="playerLabel"></h2>
+  <div class="card-container">
+    <div id="resultCard" class="is-hidden">
+      <div class="card-face card-front"><div class="number" id="numberDisplay">?</div></div>
+      <div class="card-face card-back"></div>
+    </div>
+  </div>
+  <button id="nextPlayerBtn">確認しました</button>
+</div>
+
+<div id="orderArea" class="game-section" style="display:none;">
+  <div style="margin-bottom:15px;">
+    <button id="remindBtn" class="secondary" style="font-size:14px;">👁 数字を再確認（長押し）</button>
+  </div>
+  <div id="orderButtons" style="display:flex; flex-wrap:wrap; justify-content:center;"></div>
+  <div id="selectedOrderDisplay" style="font-size:18px; margin:15px 0; min-height:1.5em; background:rgba(0,0,0,0.1); padding:10px; border-radius:10px;"></div>
+  <button id="undoBtn" class="secondary">1つ戻す</button>
+  <hr>
+  <div id="judgeConfirmArea">
+    <label style="font-weight: bold;"><input type="checkbox" id="readyCheck"> 全員の準備はいいですか？</label><br>
+    <button id="judgeBtn" style="margin-top:10px;">判定する！</button>
+  </div>
+  <div id="judgeResult" style="margin-top:20px; font-size:20px;"></div>
+  <div id="replayArea" style="display:none; margin-top:20px;">
+    <button id="replayBtn">もう一度（同じメンバー）</button>
+    <button id="homeBtn" class="secondary">トップに戻る</button>
+  </div>
+</div>
+
+<div id="nextModal" class="modal"><div class="modal-content"><h2 id="nextPlayerNameDisplay"></h2><p>他の人に見られないようにしてね</p><button id="nextOkBtn">カードを引く</button></div></div>
+<div id="remindModal" class="modal"><div class="modal-content"><h3>あなたの数字</h3><h1 id="remindNum" style="font-size:80px; color:#ff5fa8; margin:20px 0;">?</h1><p>指を離すと隠れます</p></div></div>
+<div id="historyModal" class="modal"><div class="modal-content"><h2>これまでの記録</h2><div id="historyList"></div><button class="closeModal">閉じる</button></div></div>
+
+<script>
+const topics = {
+  popularity: ["コンビニの人気", "100均の人気", "飲食店の人気", "子供に人気なもの", "お土産の人気", "有名人の人気", "乗り物の人気", "スポーツの人気"],
+  entertainment: ["アニメキャラの人気", "ゲームの人気", "声優の人気", "映画の人気", "童話の人気", "なりたいキャラ", "悪役の人気"],
+  food: ["中華料理の人気", "給食の人気", "お菓子の人気", "おにぎりの具の人気", "パンの人気", "和食の人気", "酒のつまみの人気"],
+  life: ["住みたい場所", "趣味の人気", "資格の人気", "旅行したい国", "一人暮らしに必要なもの", "カバンの中身の重要度"],
+  love: ["恋人にしたい職業", "デートスポットの人気", "モテる特技", "グッとくる仕草", "結婚したい有名人", "プロポーズの言葉"],
+  fantasy: ["ゾンビ戦の武器", "無人島に持つもの", "なりたい生き物", "宇宙人へのお土産", "欲しい特殊能力", "歴史上の人物"],
+  power: ["歴史人物の強さ", "生き物の強さ", "アニメキャラの強さ", "生き物の大きさ", "有名人の年収", "重そうなもの"],
+  emotion: ["美しいもの", "怖いもの", "楽しいこと", "嬉しい言葉", "強そうな言葉", "カッコいい苗字", "人生で大切なもの"],
+  custom: JSON.parse(localStorage.getItem("itoCustomTopics") || "[]")
+};
+
+let gameState = {
+  names: [], players: [], currentPlayerIndex: 0, selectedOrder: [],
+  savedNames: JSON.parse(localStorage.getItem("itoPersistentNames") || "[]")
+};
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playTone(type) {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  const now = audioCtx.currentTime;
+  switch(type) {
+    case 'success': osc.frequency.setValueAtTime(880, now); gain.gain.setValueAtTime(0.3, now); osc.start(); osc.stop(now + 0.5); break;
+    case 'fail': osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); gain.gain.setValueAtTime(0.3, now); osc.start(); osc.stop(now + 0.5); break;
+    case 'pop': osc.frequency.setValueAtTime(500, now); osc.frequency.exponentialRampToValueAtTime(800, now + 0.1); gain.gain.setValueAtTime(0.3, now); osc.start(); osc.stop(now + 0.1); break;
+    case 'tick': osc.frequency.setValueAtTime(1200, now); gain.gain.setValueAtTime(0.05, now); osc.start(); osc.stop(now + 0.02); break;
+  }
+}
+
+// テーマ切り替え
+document.getElementById("themeToggleBtn").onclick = () => {
+  document.body.classList.toggle("dark-mode");
+  const isDark = document.body.classList.contains("dark-mode");
+  document.getElementById("themeEmoji").textContent = isDark ? "🌙" : "🍬";
+  document.getElementById("themeToggleBtn").textContent = isDark ? "☀️ ライトモード" : "🌙 ダークモード";
+  playTone('pop');
+};
+
+const catSel = document.getElementById("categorySelect");
+const topSel = document.getElementById("topicSelect");
+const topicDisp = document.getElementById("topicDisplay");
+const customArea = document.getElementById("customTopicInputArea");
+const delTopicBtn = document.getElementById("deleteTopicBtn");
+
+function renderTopics() {
+    topSel.innerHTML = '<option value="">お題を選択</option>';
+    const category = catSel.value;
+    if(!category) return;
+    topics[category].forEach(t => { const op = document.createElement("option"); op.textContent = t; topSel.appendChild(op); });
+}
+
+catSel.onchange = () => {
+  renderTopics();
+  const isCustom = catSel.value === "custom";
+  customArea.style.display = isCustom ? "block" : "none";
+  delTopicBtn.style.display = isCustom ? "inline-block" : "none";
+  playTone('pop');
+};
+
+document.getElementById("addTopicBtn").onclick = () => {
+    const inp = document.getElementById("newTopicInput");
+    const val = inp.value.trim();
+    if(!val) return;
+    if(topics.custom.includes(val)) return alert("そのお題は既にあります");
+    topics.custom.push(val);
+    localStorage.setItem("itoCustomTopics", JSON.stringify(topics.custom));
+    inp.value = "";
+    renderTopics();
+    topSel.value = val;
+    topicDisp.textContent = val;
+    playTone('pop');
+};
+
+delTopicBtn.onclick = () => {
+    const val = topSel.value;
+    if(!val) return alert("削除するお題を選んでください");
+    if(confirm(`お題「${val}」を削除しますか？`)) {
+        topics.custom = topics.custom.filter(t => t !== val);
+        localStorage.setItem("itoCustomTopics", JSON.stringify(topics.custom));
+        renderTopics();
+        topicDisp.textContent = "お題を選んでください";
+        playTone('pop');
+    }
+};
+
+topSel.onchange = () => { topicDisp.textContent = topSel.value || "お題を選んでください"; };
+
+document.getElementById("randomTopicBtn").onclick = () => {
+  const pool = catSel.value ? topics[catSel.value] : [].concat(...Object.values(topics));
+  if(pool.length === 0) return;
+  playTone('pop');
+  let count = 0;
+  const btn = document.getElementById("randomTopicBtn");
+  btn.disabled = true;
+  topicDisp.style.color = "#ff7fbd";
+  const timer = setInterval(() => {
+    topicDisp.textContent = "🎲 " + pool[Math.floor(Math.random()*pool.length)];
+    playTone('tick');
+    if(count++ > 15) {
+      clearInterval(timer);
+      const final = pool[Math.floor(Math.random()*pool.length)];
+      topicDisp.textContent = final;
+      topicDisp.style.color = "";
+      btn.disabled = false;
+      playTone('pop');
+      topSel.value = topics[catSel.value]?.includes(final) ? final : "";
+    }
+  }, 60);
+};
+
+document.getElementById("gotoNamesBtn").onclick = () => {
+  const count = parseInt(document.getElementById("playerCountInput").value);
+  const nameArea = document.getElementById("nameArea");
+  nameArea.innerHTML = "<h4>プレイヤー名（重複不可）</h4>";
+  const savedDiv = document.createElement("div");
+  gameState.savedNames.forEach(n => {
+    const s = document.createElement("span"); s.className="tag-btn"; s.textContent = n;
+    s.onclick = () => { 
+        const inps = Array.from(document.querySelectorAll(".p-name"));
+        if(inps.some(i => i.value === n)) return alert("同じ名前は既に入力されています");
+        const empty = inps.find(i => !i.value); 
+        if(empty) empty.value = n; 
+    };
+    const x = document.createElement("span"); x.className="delete-btn"; x.textContent="×"; 
+    x.onclick=(e)=>{ e.stopPropagation(); gameState.savedNames=gameState.savedNames.filter(name=>name!==n); localStorage.setItem("itoPersistentNames", JSON.stringify(gameState.savedNames)); document.getElementById("gotoNamesBtn").click(); };
+    s.appendChild(x); savedDiv.appendChild(s);
+  });
+  nameArea.appendChild(savedDiv);
+  for(let i=0; i<count; i++) {
+    const inp = document.createElement("input"); inp.className="p-name"; inp.placeholder=`プレイヤー ${i+1}`;
+    inp.style.width="80%"; nameArea.appendChild(inp);
+  }
+  const b = document.createElement("button"); b.textContent = "このメンバーで開始！"; b.onclick = initGame;
+  nameArea.appendChild(b); nameArea.style.display="block";
+  document.getElementById("countInputArea").style.display="none";
+  playTone('pop');
+};
+
+function initGame() {
+  const topic = topicDisp.textContent;
+  if(topic.includes("選んで")) return alert("お題を決めてください");
+  const inps = Array.from(document.querySelectorAll(".p-name"));
+  const inputNames = inps.map((inp, i) => inp.value.trim() || `プレイヤー ${i+1}`);
+  if(new Set(inputNames).size !== inputNames.length) return alert("プレイヤー名が重複しています。");
+
+  gameState.names = inputNames;
+  gameState.names.forEach(n => { if(!gameState.savedNames.includes(n)) gameState.savedNames.push(n); });
+  localStorage.setItem("itoPersistentNames", JSON.stringify(gameState.savedNames));
+
+  gameState.players = Array.from({length: 100}, (_, i) => i+1).sort(()=>Math.random()-0.5).slice(0, gameState.names.length);
+  gameState.currentPlayerIndex = 0;
+  
+  document.getElementById("setupArea").style.display="none";
+  document.getElementById("playerArea").style.display="block";
+  document.getElementById("stickyTopic").style.display="block";
+  document.getElementById("currentTopicLabel").textContent = topic;
+  preparePlayer();
+}
+
+function preparePlayer() {
+  document.getElementById("resultCard").classList.add("is-hidden");
+  document.getElementById("numberDisplay").textContent = "?";
+  document.getElementById("playerArea").style.opacity = "0";
+  document.getElementById("playerLabel").textContent = `${gameState.names[gameState.currentPlayerIndex]} さんの番`;
+  document.getElementById("nextPlayerNameDisplay").textContent = `次は ${gameState.names[gameState.currentPlayerIndex]} さん`;
+  document.getElementById("nextModal").style.display="block";
+}
+
+document.getElementById("nextOkBtn").onclick = () => {
+  document.getElementById("nextModal").style.display="none";
+  document.getElementById("playerArea").style.opacity = "1";
+  let count = 0;
+  document.getElementById("resultCard").classList.add("shaking");
+  const timer = setInterval(() => {
+    document.getElementById("numberDisplay").textContent = Math.floor(Math.random()*100)+1;
+    playTone('tick');
+    if(count++ > 12) {
+      clearInterval(timer);
+      document.getElementById("numberDisplay").textContent = gameState.players[gameState.currentPlayerIndex];
+      document.getElementById("resultCard").classList.remove("shaking");
+      playTone('pop');
+    }
+  }, 60);
+};
+
+document.getElementById("resultCard").onclick = () => { document.getElementById("resultCard").classList.toggle("is-hidden"); playTone('pop'); };
+document.getElementById("nextPlayerBtn").onclick = () => {
+  gameState.currentPlayerIndex++;
+  if(gameState.currentPlayerIndex >= gameState.names.length) {
+    document.getElementById("playerArea").style.display="none";
+    document.getElementById("orderArea").style.display="block";
+    renderOrderButtons();
+  } else { preparePlayer(); }
+};
+
+document.getElementById("remindBtn").onmousedown = document.getElementById("remindBtn").ontouchstart = () => {
+  const name = prompt("誰の数字を確認しますか？");
+  const idx = gameState.names.indexOf(name);
+  if(idx !== -1) {
+    document.getElementById("remindNum").textContent = gameState.players[idx];
+    document.getElementById("remindModal").style.display = "block";
+  } else if(name) { alert("見つかりません"); }
+};
+window.onmouseup = window.ontouchend = () => document.getElementById("remindModal").style.display = "none";
+
+function renderOrderButtons() {
+  const container = document.getElementById("orderButtons");
+  container.innerHTML = "";
+  gameState.names.forEach((n, i) => {
+    const b = document.createElement("button"); b.textContent = n;
+    b.disabled = gameState.selectedOrder.includes(i);
+    b.onclick = () => { gameState.selectedOrder.push(i); renderOrderButtons(); updateOrderUI(); playTone('pop'); };
+    container.appendChild(b);
+  });
+}
+function updateOrderUI() { document.getElementById("selectedOrderDisplay").textContent = gameState.selectedOrder.map(i => gameState.names[i]).join(" → "); }
+document.getElementById("undoBtn").onclick = () => { gameState.selectedOrder.pop(); renderOrderButtons(); updateOrderUI(); };
+
+document.getElementById("judgeBtn").onclick = () => {
+  if(!document.getElementById("readyCheck").checked) return alert("準備ができたらチェックを入れてね！");
+  if(gameState.selectedOrder.length < gameState.names.length) return alert("全員選んでね");
+  const correct = gameState.players.map((num, i) => ({num, i})).sort((a,b)=>a.num-b.num).map(o => o.i);
+  const isSuccess = JSON.stringify(gameState.selectedOrder) === JSON.stringify(correct);
+  let gap = 0;
+  gameState.selectedOrder.forEach((pIdx, idx) => { gap += Math.abs(gameState.players[pIdx] - gameState.players[correct[idx]]); });
+  document.getElementById("judgeResult").innerHTML = (isSuccess ? "🎉 パーフェクト！" : "😢 ズレちゃいました") + `<br>ズレ指数: ${gap}<br><small>正解: ${correct.map(i => gameState.names[i]+'('+gameState.players[i]+')').join('→')}</small>`;
+  document.getElementById("judgeConfirmArea").style.display="none";
+  document.getElementById("replayArea").style.display="block";
+  playTone(isSuccess ? 'success' : 'fail');
+};
+
+document.getElementById("replayBtn").onclick = () => {
+  gameState.selectedOrder = [];
+  document.getElementById("judgeResult").innerHTML = "";
+  document.getElementById("judgeConfirmArea").style.display="block";
+  document.getElementById("replayArea").style.display="none";
+  document.getElementById("readyCheck").checked = false;
+  initGame();
+};
+
+document.getElementById("homeBtn").onclick = () => {
+  gameState.selectedOrder = [];
+  document.getElementById("judgeResult").innerHTML = "";
+  document.getElementById("orderArea").style.display = "none";
+  document.getElementById("setupArea").style.display = "block";
+  document.getElementById("countInputArea").style.display = "block";
+  document.getElementById("nameArea").style.display = "none";
+  document.getElementById("stickyTopic").style.display = "none";
+  document.getElementById("judgeConfirmArea").style.display = "block";
+  document.getElementById("replayArea").style.display = "none";
+  playTone('pop');
+};
+
+document.querySelectorAll(".closeModal").forEach(b => b.onclick = () => b.closest(".modal").style.display="none");
+</script>
+</body>
+</html>
